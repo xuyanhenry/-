@@ -10,43 +10,142 @@ import queue
 import base64
 from parsel import Selector
 import time
+import random
 
 
 def get_book_name(id,headers):
     # headers = {
     #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0',
-    #     'cookie':'acw_tc=1a0c39d217277476440312099e014bae6d3c86d827374186a868661b863abd; acw_sc__v2=66fb563c08cadcacd6f78280eee34924ab0c5c4b'
+    #     'cookie':'acw_tc=1a0c399617293366986786817e00b5bd210730f1cde9556e33d0c8bc558697; acw_sc__v2=6713957a678736ed1c0fa330ee64dc6c9d8cca56'
     # }
-    response = requests.get(f'https://www.qimao.com/shuku/{id}/',headers=headers)
+    #old
+    #response = requests.get(f'https://www.qimao.com/shuku/{id}/',headers=headers)
     # print("response",response)
+    response = requests.get(f"https://api-bc.wtzw.com/api/v1/reader/detail?id={id}", #proxies=proxies,
+                        timeout=12)
     if response.status_code == 200:
-        # print(response.text)
-        selector = Selector(response.text)
-        elements = selector.css('span.txt::text').get()  
+        data=response.json()
+        #print(data)
+        return data['data']['title']
+        #old
+        #selector = Selector(response.text)
+        #elements = selector.css('span.txt::text').get()  
         # print(elements)
-        if elements:
+        #if elements:
             # print("elements",elements)
-            return elements
+            #return elements
+        
     else:
         print("Failed to fetch data，please try again")
         return None
     
 
-def get_book_list(id):
-    header = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0',
-        'cookie':'acw_tc=1a0c39d217277476440312099e014bae6d3c86d827374186a868661b863abd; acw_sc__v2=66fb563c08cadcacd6f78280eee34924ab0c5c4b'
+
+def get_headers(book_id):
+
+    version_list = [
+        '73720', '73700',
+        '73620', '73600',
+        '73500',
+        '73420', '73400',
+        '73328', '73325', '73320', '73300',
+        '73220', '73200',
+        '73100', '73000', '72900',
+        '72820', '72800',
+        '70720', '62010', '62112',
+    ]
+
+    random.seed(book_id)
+
+    version = random.choice(version_list)
+
+    headers = {
+        "AUTHORIZATION": "",
+        "app-version": f"{version}",
+        "application-id": "com.****.reader",
+        "channel": "unknown",
+        "net-env": "1",
+        "platform": "android",
+        "qm-params": "",
+        "reg": "0",
     }
-    session = requests.Session()
-    response = session.get(f'https://www.qimao.com/api/book/chapter-list?book_id={id}',headers=header)
+
+    # 获取 headers 的所有键并排序
+    keys = sorted(headers.keys())
+
+    # 生成待签名的字符串
+    sign_str = ''.join([k + '=' + str(headers[k]) for k in keys]) + sign_key
+
+    # 生成签名
+    headers['sign'] = hashlib.md5(sign_str.encode()).hexdigest()
+
+    return headers
+
+
+def sign_url_params(params):
+
+    keys = sorted(params.keys())
+
+    # 生成待签名的字符串
+    sign_str = ''.join([k + '=' + str(params[k]) for k in keys]) + sign_key
+
+    # 使用MD5哈希生成签名
+    signature = hashlib.md5(sign_str.encode()).hexdigest()
+
+    # 将签名添加到参数字典中
+    params['sign'] = signature
+
+    return params
+
+def get_book_list(id):
+    #old
+    # header = {
+    #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0',
+    #     'cookie':'acw_tc=1a0c380d17293326944078983e00f31fb03eeeae8bb23df7722825188305c3; acw_sc__v2=671385d6f25d1066ad65805bff4e5dc99d6bf954'
+    # }
+    # session = requests.Session()
+    # response = session.get(f'https://www.qimao.com/api/book/chapter-list?book_id={id}',headers=header)
+    # try:
+    #     if response.status_code == 200:
+    #         # print("response",response.text)
+    #         data = response.json()
+            
+    #         if 'data' in data and 'chapters' in data['data']:
+    #             list = data['data']['chapters']
+    #             list_data = [{'id': chapter['id'], 'title': chapter['title']} for chapter in list]
+    #             return list_data
+    #         elif 'errors' in data:
+    #             list=[]
+    #             return list
+    #         else:
+    #             print("Unexpected response format")
+    #             # Handle unexpected format
+    #             return None
+    #     else:
+    #         print("Failed to fetch data，please try again")
+    #         return None
+    # except Exception as e:
+    #     # print(response.text)
+    #     print("Error:", e)
+    params = {
+        "id": id,
+        #"chapterId": chapter_id,
+    }
+    response = requests.get("https://api-ks.wtzw.com/api/v1/chapter/chapter-list",
+                            params=sign_url_params(params),
+                            headers=get_headers(id),
+                            #proxies=proxies,
+                            timeout=12)
     try:
         if response.status_code == 200:
             # print("response",response.text)
             data = response.json()
+            #print("response",data)
             
-            if 'data' in data and 'chapters' in data['data']:
-                list = data['data']['chapters']
+            if 'data' in data and 'chapter_lists' in data['data']:
+                list = data['data']['chapter_lists']
                 list_data = [{'id': chapter['id'], 'title': chapter['title']} for chapter in list]
+                #print("list_data",list_data)
                 return list_data
             elif 'errors' in data:
                 list=[]
@@ -61,6 +160,8 @@ def get_book_list(id):
     except Exception as e:
         # print(response.text)
         print("Error:", e)
+    
+    
         
 def md5(data):
     return hashlib.md5(data.encode()).hexdigest()
