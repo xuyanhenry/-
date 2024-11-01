@@ -82,7 +82,21 @@ dic_data = {
     "58710": "外","58711": "样","58712": "a","58713": "海","58714": "们","58715": "任"
 }
 
-
+def replace_or_remove_chars(text, replacements):
+    for old_char, new_char in replacements.items():
+        text = text.replace(old_char, new_char)
+    return text
+replacements = {
+    '/': '、',  
+    '\\' : '、',
+    ':': '：',  
+    '*': 'x',  
+    '?':'？',
+    '<':'《',
+    '>':'》',
+    '"':'\'',
+    '|':'、',
+}
 def get_text_from_xpath(book_id, css):
     url = f"https://fanqienovel.com/page/{book_id}"
     response = requests.get(url)
@@ -91,6 +105,8 @@ def get_text_from_xpath(book_id, css):
         elements = selector.css(css).get()         #书名
         if elements:
             print("elements",elements)
+            elements = replace_or_remove_chars(elements, replacements)
+            elements = re.sub(r'[\\/:*?"<>|]', '_', elements)
             return elements
     return None
 
@@ -396,6 +412,7 @@ def get_chapter_list(book_id):
 
 
 
+
 if __name__ == '__main__':
     # Main execution
     while True:
@@ -406,6 +423,7 @@ if __name__ == '__main__':
         text_content = get_text_from_xpath(book_id, css)
         if text_content:
             book_name = text_content.strip()
+            
             print("book name:",book_name)
         else:
             book_name = "Unknown_Book"

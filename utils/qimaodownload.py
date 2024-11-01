@@ -11,6 +11,7 @@ import base64
 from parsel import Selector
 import time
 import random
+import re
 
 
 def get_book_name(id,headers):
@@ -26,7 +27,9 @@ def get_book_name(id,headers):
     if response.status_code == 200:
         data=response.json()
         #print(data)
-        return data['data']['title']
+        filename=data['data']['title']
+        filename = re.sub(r'[\\/:*?"<>|]', '_', filename)
+        return filename
         #old
         #selector = Selector(response.text)
         #elements = selector.css('span.txt::text').get()  
